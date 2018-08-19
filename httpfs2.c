@@ -193,6 +193,7 @@ ssize_t get_cached(struct_url *url, off_t start, size_t rsize) {
 #endif
     p = idxhead;
 
+	
     while (p) {
         if ( (p->start <= start) && ((p->start + (off_t)p->size-1) >= start+(off_t)rsize-1) ) {
 
@@ -206,7 +207,6 @@ ssize_t get_cached(struct_url *url, off_t start, size_t rsize) {
             lseek(fdcache, p->cstart + (off_t)p->size + CRCLEN, SEEK_SET); // set to start of block to read header
             read(fdcache, md5[1], CRCLEN);
             md5[1][32] = 0;
-
 
             if (strcmp(p->md5, md5[0]) || strcmp(p->md5, md5[1])){ // Everything is bad. cache corrupted. reset cache
                 bytes = 0;
@@ -480,7 +480,7 @@ static char * b64_encode(unsigned const char* ptr, long len) {
  * The FUSE operations originally ripped from the hello_ll sample.
  */
 
-static int httpfs_stat(fuse_ino_t ino, struct stat *stbuf)
+static off_t httpfs_stat(fuse_ino_t ino, struct stat *stbuf)
 {
     stbuf->st_ino = ino;
     switch (ino) {
@@ -494,7 +494,7 @@ static int httpfs_stat(fuse_ino_t ino, struct stat *stbuf)
                     fprintf(stderr, "%s: %s: stat()\n", argv0, url->tname); /*DEBUG*/
                     stbuf->st_mode = S_IFREG | 0444;
                     stbuf->st_nlink = 1;
-                    return (int) get_stat(url, stbuf);
+                    return get_stat(url, stbuf);
                 }
                 break;
 
@@ -567,7 +567,7 @@ static int reply_buf_limited(fuse_req_t req, const char *buf, size_t bufsize,
 
     if (off < bufsize)
         return fuse_reply_buf(req, buf + off,
-                min(bufsize - (size_t)off, maxsize));
+                (size_t)min(bufsize - off, maxsize));
     else
         return fuse_reply_buf(req, NULL, 0);
 }
@@ -621,7 +621,7 @@ static void httpfs_read(fuse_req_t req, fuse_ino_t ino, size_t size,
 
     assert(url->file_size >= off);
 
-    size=min(size, (size_t)(url->file_size - off));
+    size=(size_t)min(size, (url->file_size - off));
 
     if(url->file_size == off) {
         /* Handling of EOF is not well documented, returning EOF as error
@@ -2175,7 +2175,7 @@ retry:
 
     if (content_length != size) {
         http_report("didn't yield the whole piece.", "GET", 0, 0);
-        size = min((size_t)content_length, size);
+        size = (size_t)min(content_length, size);
     }
 
 
